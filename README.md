@@ -19,11 +19,14 @@ git clone https://github.com/YOUR_USERNAME/compound-engineering ~/.claude/compou
 # Copy files
 cp -r ~/.claude/compound-engineering-temp/commands ~/.claude/
 cp -r ~/.claude/compound-engineering-temp/learnings ~/.claude/
+cp -r ~/.claude/compound-engineering-temp/hooks ~/.claude/
 cp ~/.claude/compound-engineering-temp/wisdom-processed.json ~/.claude/
 
 # Append compound engineering instructions to your CLAUDE.md
 # (The file has instructions at the top - copy everything below the --- line)
 cat ~/.claude/compound-engineering-temp/CLAUDE-additions.md >> ~/.claude/CLAUDE.md
+
+# Optional: Add hooks to settings.json (see Hooks Setup below)
 
 # Clean up
 rm -rf ~/.claude/compound-engineering-temp
@@ -37,10 +40,13 @@ rm -rf ~/.claude/compound-engineering-temp
 ~/.claude/
 ├── CLAUDE.md                    # Instructions Claude follows
 ├── wisdom-processed.json        # Tracks imported reading wisdom
+├── settings.json                # Hooks configuration
 ├── commands/
 │   ├── capture.md              # /capture skill
 │   ├── patterns.md             # /patterns skill
 │   └── review.md               # /review skill
+├── hooks/
+│   └── check-wisdom.sh         # Daily wisdom import check
 └── learnings/
     ├── index.md                # Quick reference (start here)
     ├── bugs.md                 # Bug patterns with code
@@ -90,6 +96,43 @@ Checking learnings...
 - No other patterns apply to this change
 ```
 
+## Hooks Setup (Optional)
+
+Add these hooks to `~/.claude/settings.json` for automatic behavior:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "If this task involved fixing a bug, making an architectural decision, or discovering a code pattern worth remembering, ask if the user wants to capture it as a learning using /capture. Be brief - just ask 'Worth capturing this as a learning?' if relevant. Skip if it was a simple/routine task."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/check-wisdom.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This adds:
+- **Stop hook**: Prompts to `/capture` learnings after significant work
+- **PreToolUse hook**: Checks for new WUWT wisdom once per day
+
 ## Learning by Analogy (from Non-Code Reading)
 
 Engineering patterns often hide in non-technical domains:
@@ -109,7 +152,8 @@ If you use the "What's Up With That?" Chrome extension for reading:
 
 1. Enable "Claude Code" toggle in the Wisdom section when saving lessons
 2. Wisdom from your reading exports to `~/Downloads/wuwt-wisdom-export.json`
-3. Claude checks this daily (after 6am) and evaluates each item:
+3. The `check-wisdom.sh` hook (see Hooks Setup above) checks once per day and reminds Claude
+4. Claude evaluates each item:
    - **Literal match**: Directly about software/engineering → offer to capture
    - **Metaphor potential**: Pattern from another domain → propose the analogy, then offer to capture
 
