@@ -44,6 +44,7 @@ rm -rf ~/.claude/compound-engineering-temp
 ├── commands/
 │   ├── capture.md              # /capture skill
 │   ├── patterns.md             # /patterns skill
+│   ├── reading-list.md         # /reading-list skill
 │   └── review.md               # /review skill
 ├── hooks/
 │   └── check-wisdom.sh         # Daily wisdom import check
@@ -85,6 +86,14 @@ Shows a summary of accumulated wisdom.
 ```
 
 Reviews current code changes against accumulated patterns. Checks git diff and reports which patterns apply, which were missed, and suggests new patterns to capture.
+
+### Get Reading Suggestions
+
+```
+/reading-list
+```
+
+Suggests technical articles based on your learnings and reading wisdom. Analyzes themes in your captured patterns and finds articles to deepen understanding or fill gaps. Closes the loop: reading informs coding, coding informs reading.
 
 ### Automatic Checking
 
