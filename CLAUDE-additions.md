@@ -6,69 +6,89 @@
 
 # Compound Engineering
 
-## MANDATORY: Check Learnings Before Writing Code
+## Before Writing Code: Task-Triggered Checklists
 
-**Before implementing ANY feature, fix, or modification, you MUST:**
+**Identify the task type, check only the relevant checklist:**
 
-1. **Read `~/.claude/learnings/index.md`** using the Read tool
-2. **Scan Universal Patterns** for applicable learnings (timeouts, classification, data processing, etc.)
-3. **Check technology-specific section** if relevant to your stack
-4. **State which patterns apply** (or "none applicable") before proceeding
+| If you're doing this... | Check this file |
+|-------------------------|-----------------|
+| Writing innerHTML or template strings | `~/.claude/learnings/when-html-in-js.md` |
+| Making fetch() or API calls | `~/.claude/learnings/when-http-calls.md` |
+| Processing/analyzing text | `~/.claude/learnings/when-text-processing.md` |
+| Building scheduled/background jobs | `~/.claude/learnings/when-scheduled-jobs.md` |
+| Working on Chrome extension | `~/.claude/learnings/when-chrome-extension.md` |
+| Designing API endpoints | `~/.claude/learnings/when-api-design.md` |
+| Classifying/categorizing entities | `~/.claude/learnings/when-classification.md` |
 
-This is not optional. Accumulated learnings prevent repeated mistakes and compound engineering wisdom.
-
-Example before writing code:
+**Example:**
 ```
-Checking learnings...
-- "Always timeout external calls" applies - adding AbortController
-- "Multi-signal classification" applies - will use site_name + description
-- No technology-specific patterns apply to this change
+Task: Add upgrade modal to popup.js (Chrome extension, uses innerHTML)
+Checking: when-chrome-extension.md, when-html-in-js.md
+Applying: HTML entities for special chars, pass constants via args
 ```
+
+Multiple checklists may apply. Check all relevant ones. Skip if none match.
+
+## Automated Enforcement
+
+Pre-commit hook catches automatable patterns:
+- Raw Unicode in JS strings (em-dash, multiplication sign) - **blocks commit**
+- fetch() without timeout - warning
+- textContent with HTML entities - warning
+
+Install: `ln -sf ~/.claude/learnings/hooks/pre-commit .git/hooks/pre-commit`
 
 ## Capture New Learnings
 
-When fixing bugs or making architectural decisions, proactively offer to capture using `/capture`:
-- Bug patterns → bugs.md
-- Design decisions → architecture.md
-- Review insights → code-review.md
+When you fix a bug or make an architectural decision, offer to capture:
 
-**Ask:** "Should we capture this as a learning?"
+Say: "Worth capturing this [bug fix / decision / pattern]? (`/capture`)"
 
-## Learnings Files
+Capture immediately - context is fresh. Don't batch for later.
 
-- `~/.claude/learnings/index.md` - **Start here** - Universal patterns + technology index
-- `~/.claude/learnings/bugs.md` - Bug patterns with code examples
-- `~/.claude/learnings/architecture.md` - System design decisions with rationale
-- `~/.claude/learnings/code-review.md` - Checklist items for reviewing code
+**After compression**: Only ask "The previous session had [X] - was that captured?" as a safety check.
+
+## Learning Commands
+
+- `/capture` - Save new learnings (bugs, architecture, patterns)
+- `/review` - Review code against learnings
+- `/patterns` - Show accumulated learnings
+
+## Learnings Structure
+
+```
+~/.claude/learnings/
+├── index.md              # Overview + quick reference
+├── when-html-in-js.md    # Task checklist
+├── when-http-calls.md    # Task checklist
+├── when-*.md             # Other task checklists
+├── hooks/
+│   └── pre-commit        # Automated enforcement
+├── bugs.md               # Archive: bug patterns with context
+├── architecture.md       # Archive: design decisions
+└── code-review.md        # Archive: review checklist
+```
+
+**Task checklists** = quick checks before writing code (20-40 lines each)
+**Archive files** = detailed reference when you need full context
 
 ## Cross-Domain Thinking
 
 Many learnings are universal patterns in technology-specific clothing:
-- "Timeout external calls" → applies to JS fetch, PHP file_get_contents, Python requests
-- "Multi-signal classification" → applies to domains, users, content, any entity
-- "Sanitize before analysis" → applies to RSS, HTML, JSON, any text processing
+- "Timeout external calls" applies to JS fetch, PHP file_get_contents, Python requests
+- "Multi-signal classification" applies to domains, users, content, any entity
+- "Sanitize before analysis" applies to RSS, HTML, JSON, any text processing
 
 When capturing learnings, identify the **abstract pattern** that transcends the specific technology.
 
 ## 6am Wisdom Import (Optional - WUWT Users)
 
-At the start of each day (after 6am), check for wisdom from reading:
+On the **first session after 6am**, check for new reading wisdom to import:
 
-1. Check if `~/Downloads/wuwt-wisdom-export.json` exists and has new items
-2. Read `~/.claude/wisdom-processed.json` to see which items have been processed
-3. For each new item, evaluate:
-   - **Literal match**: Directly about software/engineering → offer to `/capture`
-   - **Metaphor potential**: Pattern from another domain → propose the analogy, ask if user wants to `/capture`
-4. Update `~/.claude/wisdom-processed.json` with processed item IDs
+1. **Read** `~/Downloads/wuwt-wisdom-export.json` (if it exists)
+2. **Read** `~/.claude/wisdom-processed.json` to see which IDs were already processed
+3. **For each unprocessed item**, evaluate if it applies to engineering
+4. **If applicable**, offer to capture it
+5. **Update** `~/.claude/wisdom-processed.json` with processed IDs
 
-Example:
-```
-I found wisdom from your reading:
-"Successful communities have clear boundaries but permeable membranes"
-(from: "The Art of Gathering")
-
-This could apply to engineering as: "APIs should have clear contracts (boundaries)
-but flexible input handling (permeable membranes)"
-
-Want me to /capture this analogy?
-```
+Only do this check once per day (after 6am).

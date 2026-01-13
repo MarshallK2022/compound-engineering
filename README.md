@@ -2,37 +2,75 @@
 
 A system for accumulating engineering wisdom across coding sessions. Learn once, apply forever.
 
-## What This Does
+## The Problem
 
-- **Captures learnings** from bug fixes, architectural decisions, and code reviews
-- **Cross-domain patterns** - a lesson in JavaScript informs future Python work
-- **Learning by analogy** - wisdom from non-code reading (articles, books) can inform engineering patterns
-- **Automatic checking** - Claude checks learnings before writing code
-- **WUWT Integration** - Import wisdom from your reading (if using What's Up With That? extension)
+You fix a bug. Next month, you make the same mistake. The knowledge existed - it just wasn't applied.
+
+**Old approach:** Scan a long index before every code change. Easy to skip, inefficient, patterns organized wrong.
+
+**New approach:** Two retrieval paths that match how work actually happens.
+
+## How It Works
+
+### 1. Automated Enforcement (Pre-Commit Hook)
+
+Detectable anti-patterns get caught automatically - no thinking required.
+
+```bash
+# Install in any repo
+ln -sf ~/.claude/learnings/hooks/pre-commit .git/hooks/pre-commit
+```
+
+The hook catches:
+| Pattern | Action |
+|---------|--------|
+| Raw Unicode in JS (em-dash, multiplication sign) | **Blocks commit** |
+| fetch() without AbortController | Warning |
+| textContent with HTML entities | Warning |
+
+### 2. Task-Triggered Checklists
+
+Before writing code, identify the task type and check only the relevant file:
+
+| Task | Checklist |
+|------|-----------|
+| Writing innerHTML or template strings | `when-html-in-js.md` |
+| Making fetch() or API calls | `when-http-calls.md` |
+| Processing/analyzing text | `when-text-processing.md` |
+| Building scheduled/background jobs | `when-scheduled-jobs.md` |
+| Working on Chrome extension | `when-chrome-extension.md` |
+| Designing API endpoints | `when-api-design.md` |
+| Classifying/categorizing entities | `when-classification.md` |
+
+Each checklist is ~30-40 lines. Check relevant ones, skip the rest.
+
+**Example:**
+```
+Task: Add upgrade modal to popup.js (Chrome extension, uses innerHTML)
+Checking: when-chrome-extension.md, when-html-in-js.md
+Applying: HTML entities for special chars, pass constants via args
+```
 
 ## Quick Setup
 
 ```bash
-# Clone to a temp directory
-git clone https://github.com/YOUR_USERNAME/compound-engineering ~/.claude/compound-engineering-temp
+# Clone to your .claude directory
+git clone https://github.com/MarshallK2022/compound-engineering ~/.claude/compound-temp
 
 # Copy files
-cp -r ~/.claude/compound-engineering-temp/commands ~/.claude/
-cp -r ~/.claude/compound-engineering-temp/learnings ~/.claude/
-cp -r ~/.claude/compound-engineering-temp/hooks ~/.claude/
-cp ~/.claude/compound-engineering-temp/wisdom-processed.json ~/.claude/
+cp -r ~/.claude/compound-temp/learnings ~/.claude/
+cp -r ~/.claude/compound-temp/commands ~/.claude/
+mkdir -p ~/.claude/learnings/hooks
+cp ~/.claude/compound-temp/hooks/pre-commit ~/.claude/learnings/hooks/
+cp ~/.claude/compound-temp/hooks/check-wisdom.sh ~/.claude/hooks/ 2>/dev/null || true
+cp ~/.claude/compound-temp/wisdom-processed.json ~/.claude/
 
-# Append compound engineering instructions to your CLAUDE.md
-# (The file has instructions at the top - copy everything below the --- line)
-cat ~/.claude/compound-engineering-temp/CLAUDE-additions.md >> ~/.claude/CLAUDE.md
-
-# Optional: Add hooks to settings.json (see Hooks Setup below)
+# Append to CLAUDE.md (or create it)
+cat ~/.claude/compound-temp/CLAUDE-additions.md >> ~/.claude/CLAUDE.md
 
 # Clean up
-rm -rf ~/.claude/compound-engineering-temp
+rm -rf ~/.claude/compound-temp
 ```
-
-**Note:** If you don't have a `~/.claude/CLAUDE.md` yet, create one first or just copy the additions file directly.
 
 ## Directory Structure
 
@@ -40,19 +78,24 @@ rm -rf ~/.claude/compound-engineering-temp
 ~/.claude/
 ├── CLAUDE.md                    # Instructions Claude follows
 ├── wisdom-processed.json        # Tracks imported reading wisdom
-├── settings.json                # Hooks configuration
 ├── commands/
 │   ├── capture.md              # /capture skill
 │   ├── patterns.md             # /patterns skill
-│   ├── reading-list.md         # /reading-list skill
 │   └── review.md               # /review skill
-├── hooks/
-│   └── check-wisdom.sh         # Daily wisdom import check
 └── learnings/
-    ├── index.md                # Quick reference (start here)
-    ├── bugs.md                 # Bug patterns with code
-    ├── architecture.md         # Design decisions
-    └── code-review.md          # Review checklists
+    ├── index.md                # Overview + quick reference
+    ├── when-html-in-js.md      # Task checklist
+    ├── when-http-calls.md      # Task checklist
+    ├── when-text-processing.md # Task checklist
+    ├── when-scheduled-jobs.md  # Task checklist
+    ├── when-chrome-extension.md# Task checklist
+    ├── when-api-design.md      # Task checklist
+    ├── when-classification.md  # Task checklist
+    ├── hooks/
+    │   └── pre-commit          # Automated enforcement
+    ├── bugs.md                 # Archive: bug patterns
+    ├── architecture.md         # Archive: design decisions
+    └── code-review.md          # Archive: review checklist
 ```
 
 ## Usage
@@ -65,11 +108,7 @@ After fixing a bug or making an architectural decision:
 /capture
 ```
 
-Claude will:
-1. Analyze what was learned
-2. Ask you to confirm the pattern
-3. Save it to the appropriate file
-4. Update the index
+Claude will analyze what was learned, confirm the pattern, and save it appropriately.
 
 ### View Your Learnings
 
@@ -85,121 +124,38 @@ Shows a summary of accumulated wisdom.
 /review
 ```
 
-Reviews current code changes against accumulated patterns. Checks git diff and reports which patterns apply, which were missed, and suggests new patterns to capture.
+Reviews current code changes against accumulated patterns.
 
-### Get Reading Suggestions
+## Adding New Learnings
 
-```
-/reading-list
-```
+When you discover a pattern:
 
-Suggests technical articles based on your learnings and reading wisdom. Analyzes themes in your captured patterns and finds articles to deepen understanding or fill gaps. Closes the loop: reading informs coding, coding informs reading.
-
-### Automatic Checking
-
-Claude automatically checks `~/.claude/learnings/index.md` before implementing features. You'll see:
-
-```
-Checking learnings...
-- "Always timeout external calls" applies - adding AbortController
-- No other patterns apply to this change
-```
-
-## Hooks Setup (Optional)
-
-Add these hooks to `~/.claude/settings.json` for automatic behavior:
-
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "If this task involved fixing a bug, making an architectural decision, or discovering a code pattern worth remembering, ask if the user wants to capture it as a learning using /capture. Be brief - just ask 'Worth capturing this as a learning?' if relevant. Skip if it was a simple/routine task."
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/check-wisdom.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-This adds:
-- **Stop hook**: Prompts to `/capture` learnings after significant work
-- **PreToolUse hook**: Checks for new WUWT wisdom once per day
-
-## Learning by Analogy (from Non-Code Reading)
-
-Engineering patterns often hide in non-technical domains:
-
-| Reading | Analogy | Engineering Pattern |
-|---------|---------|---------------------|
-| Forest ecosystems are resilient through diversity | Redundancy prevents single points of failure | Distributed systems need redundancy |
-| Immune systems remember past threats | Cache previous solutions | Memoization, learned indexes |
-| River deltas branch to handle variable flow | Split load across channels | Load balancing, sharding |
-| Ant colonies use pheromone trails | Leave traces for others to follow | Logging, breadcrumbs, audit trails |
-
-When you encounter wisdom from reading - articles, books, conversations - ask: **"What engineering pattern does this represent?"**
-
-### WUWT Integration (Optional)
-
-If you use the "What's Up With That?" Chrome extension for reading:
-
-1. Enable "Claude Code" toggle in the Wisdom section when saving lessons
-2. Wisdom from your reading exports to `~/Downloads/wuwt-wisdom-export.json`
-3. The `check-wisdom.sh` hook (see Hooks Setup above) checks once per day and reminds Claude
-4. Claude evaluates each item:
-   - **Literal match**: Directly about software/engineering → offer to capture
-   - **Metaphor potential**: Pattern from another domain → propose the analogy, then offer to capture
-
-Example:
-```
-I found wisdom from your reading:
-"APIs should be designed for machine readability in the age of AI"
-(from: "The Future of Developer Tools")
-
-This directly applies to engineering. Want me to /capture it?
-```
-
-Or:
-```
-I found wisdom from your reading:
-"Successful communities have clear boundaries but permeable membranes"
-(from: "The Art of Gathering")
-
-This could apply to engineering as: "APIs should have clear contracts (boundaries)
-but flexible input handling (permeable membranes)"
-
-Want me to /capture this analogy?
-```
+1. **Does it fit an existing `when-*.md`?** Add it there
+2. **Is it a new task type?** Create `when-{task}.md`
+3. **Can it be automated?** Add to `hooks/pre-commit`
+4. **Need full context?** Add to `bugs.md` or `architecture.md`
 
 ## Philosophy
 
-**Compound wisdom**: Every bug fixed, every architectural decision made, every insight from reading becomes part of your permanent engineering knowledge.
+**Task-triggered beats exhaustive scanning.** Check what's relevant to your current task, not everything.
 
-**Cross-domain thinking**: Patterns transcend technology. "Timeout external calls" applies to JavaScript fetch, Python requests, PHP file_get_contents, Go http.Client. "Resilience through redundancy" applies to distributed systems, team structures, and backup strategies.
+**Automated beats manual.** If a pattern can be detected programmatically, enforce it in the pre-commit hook.
 
-**Analogical reasoning**: The best engineers see patterns across domains. A lesson from biology, economics, or urban planning might be the insight that solves your hardest technical problem.
+**Compound over time.** Every bug fixed, every architectural decision made becomes part of your permanent engineering knowledge.
 
-**Learn once, apply forever**: The learnings file grows over time. Claude checks it before every implementation.
+**Abstract patterns transcend technology.** "Timeout external calls" applies to JavaScript, Python, Go, PHP. Capture the principle, not just the syntax.
+
+## WUWT Integration (Optional)
+
+If you use the "What's Up With That?" Chrome extension for reading:
+
+1. Enable "Claude Code" toggle when saving wisdom
+2. Wisdom exports to `~/Downloads/wuwt-wisdom-export.json`
+3. Claude checks once per day and offers to capture relevant learnings
 
 ## Contributing
 
-Found a universal pattern? Submit a PR to the `learnings/` directory.
+Found a universal pattern? Submit a PR to add it.
 
 ## License
 
